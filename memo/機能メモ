@@ -1,0 +1,15 @@
+・Line Botからのwebhookで、Riot関係の情報をLINE通知する
+・Line Messaging APi → API Gateway → Lambda → Line Messaging APi
+
+・リーダーボードの取得
+
+
+・リーダーボード:名前検索機能
+・リーダーボード:episode,ACTの切り替え
+・メンテナンス情報の通知
+・パッチノートページURLの転送
+
+上位API利用できるようになったら
+・直近20試合の成績とHS率の集計
+・武器ごとのHS率の集計
+・ストア情報の取得

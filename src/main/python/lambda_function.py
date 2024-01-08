@@ -11,16 +11,22 @@ from linebot.models import (
 )
 from linebot.exceptions import LineBotApiError
 
+def concat_str(*args):
+    result = ''.join(args)
+    return result
+
 def getLeaderBoards():
-    ACT_ID_EPISODE4_ACT3 = os.environ.get('ACT_ID_EPISODE4_ACT3')
-    # playerCount = '10'
-    # startIndex = '0'
-    # leaderBoardsUrl = 'https://ap.api.riotgames.com/val/ranked/v1/leaderboards/by-act/'
-    url = 'https://ap.api.riotgames.com/val/ranked/v1/leaderboards/by-act/aca29595-40e4-01f5-3f35-b1b3d304c96e?size=10&startIndex=0'
-    headderTokenName = 'X-Riot-Token'
+    actId = os.environ.get('ACT_ID')
+    amount = os.environ.get('PLAYER_AMOUNT')
+    startIndex = '0'
+    leaderBoardsUrl = os.environ.get('RIOT_LEADER_BOARDS_URL')
+    url = concat_str(leaderBoardsUrl, actId, "?size=", amount, "&startIndex=", startIndex)
+    print("URL:", url)
+
+    headerTokenName = 'X-Riot-Token'
     riotToken = os.environ.get('RIOT_TOKEN')
 
-    response = requests.get(url, headers={headderTokenName : riotToken})
+    response = requests.get(url, headers={headerTokenName : riotToken})
     return response
 
 def lambda_handler(event, context):
@@ -39,8 +45,9 @@ def lambda_handler(event, context):
     userId = os.environ.get('LINE_USER_TOKEN')
 
     line_bot_api.push_message(userId, TextSendMessage("本日のリーダーボードは以下です。"))
+    rangeSize = int(os.environ.get('PLAYER_AMOUNT'))
 
-    for num in range(9):
+    for num in range(rangeSize):
         line_bot_api.push_message(userId, TextSendMessage(
           text="Rank:" + json.dumps(jsonData["players"][num]["leaderboardRank"]) + "\nRankedRating:" + json.dumps(jsonData["players"][num]["rankedRating"]) + "\nName:" + json.dumps(jsonData["players"][num]["gameName"])
     ))

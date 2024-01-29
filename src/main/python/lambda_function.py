@@ -11,16 +11,39 @@ from linebot.models import (
 )
 from linebot.exceptions import LineBotApiError
 
-def getLeaderBoards():
-    ACT_ID_EPISODE4_ACT3 = os.environ.get('ACT_ID_EPISODE4_ACT3')
-    # playerCount = '10'
-    # startIndex = '0'
-    # leaderBoardsUrl = 'https://ap.api.riotgames.com/val/ranked/v1/leaderboards/by-act/'
-    url = 'https://ap.api.riotgames.com/val/ranked/v1/leaderboards/by-act/aca29595-40e4-01f5-3f35-b1b3d304c96e?size=10&startIndex=0'
-    headderTokenName = 'X-Riot-Token'
+def concat_str(*args):
+    result = ''.join(args)
+    return result
+
+def getServerStatus():
+    url = os.environ.get('RIOT_SERVER_STATUS_URL')
+
+    headerTokenName = 'X-Riot-Token'
     riotToken = os.environ.get('RIOT_TOKEN')
 
-    response = requests.get(url, headers={headderTokenName : riotToken})
+    response = requests.get(url, headers={headerTokenName : riotToken})
+    responseJson = response.json()
+    statusList = responseJson["maintenances"]
+
+    if not statusList:
+        message = "available"
+    else:
+        message = "unavailable"
+
+    return message
+
+def getLeaderBoards():
+    actId = os.environ.get('ACT_ID')
+    amount = os.environ.get('PLAYER_AMOUNT')
+    startIndex = '0'
+    leaderBoardsUrl = os.environ.get('RIOT_LEADER_BOARDS_URL')
+    url = concat_str(leaderBoardsUrl, actId, "?size=", amount, "&startIndex=", startIndex)
+    print("URL:", url)
+
+    headerTokenName = 'X-Riot-Token'
+    riotToken = os.environ.get('RIOT_TOKEN')
+
+    response = requests.get(url, headers={headerTokenName : riotToken})
     return response
 
 def lambda_handler(event, context):
@@ -32,17 +55,22 @@ def lambda_handler(event, context):
     hash = hmac.new(channel_secret.encode('utf-8'),
     body.encode('utf-8'), hashlib.sha256).digest()
     signature = base64.b64encode(hash)
-
-    leaderBoards = getLeaderBoards()
-    jsonData = leaderBoards.json()
-
     userId = os.environ.get('LINE_USER_TOKEN')
 
-    line_bot_api.push_message(userId, TextSendMessage("本日のリーダーボードは以下です。"))
+    # Valorantのサーバー状態を取得
+    status = getServerStatus()
+    line_bot_api.push_message(userId, TextSendMessage(text="現在のサーバーステータス：" + status))
 
-    for num in range(9):
+    # RiotAPIからリーダーボードを取得
+    leaderBoardsResponse = getLeaderBoards()
+    leaderBoardsJson = leaderBoardsResponse.json()
+
+    line_bot_api.push_message(userId, TextSendMessage("本日のリーダーボードは以下です。"))
+    rangeSize = int(os.environ.get('PLAYER_AMOUNT'))
+
+    for num in range(rangeSize):
         line_bot_api.push_message(userId, TextSendMessage(
-          text="Rank:" + json.dumps(jsonData["players"][num]["leaderboardRank"]) + "\nRankedRating:" + json.dumps(jsonData["players"][num]["rankedRating"]) + "\nName:" + json.dumps(jsonData["players"][num]["gameName"])
+          text="Rank:" + json.dumps(leaderBoardsJson["players"][num]["leaderboardRank"]) + "\nRankedRating:" + json.dumps(leaderBoardsJson["players"][num]["rankedRating"]) + "\nName:" + json.dumps(leaderBoardsJson["players"][num]["gameName"])
     ))
 
     # # リプライ用トークン
